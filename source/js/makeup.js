@@ -22,6 +22,22 @@ var Makeup = (function($, _) {
         mm: '_'
     };
 
+    /**
+     * @param {string} re
+     * @returns {string}
+     */
+    function escapeRegExp(re) {
+        return re.replace(/([?!\.{}[+\-\]^|$(=:)\/\\*])/g, '\\$1');
+    }
+
+    /**
+     * @param {string} str
+     * @returns {string}
+     */
+    function stripTags(str) {
+        return str.replace(/<[^>]+>/g, '');
+    }
+
     function Makeup(options) {
         if (typeof makeup == 'object') {
             return makeup;
@@ -44,10 +60,13 @@ var Makeup = (function($, _) {
                 selectors: {
                     element: '.makeup',
 
+                    searchInput: '.makeup__search-input',
+
                     sidebar: '.makeup__aside',
                     scroller: '.makeup__aside-in',
                     scrollerTrack: '.makeup__aside-track',
                     scrollerTrackBar: '.makeup__aside-track-bar',
+                    module: '.makeup__module',
                     moduleHeader: '.makeup__module-header',
                     moduleType: '.makeup__subnav-link',
 
@@ -73,6 +92,8 @@ var Makeup = (function($, _) {
                 },
 
                 modifiers: {
+                    hiddenModule: 'makeup__module--hidden',
+                    hiddenModuleType: 'makeup__subnav-link--hidden',
                     baron: 'makeup__aside--baron'
                 },
 
@@ -308,7 +329,59 @@ var Makeup = (function($, _) {
          * Search control listeners
          */
         _bindSearchListeners: function() {
+            var makeup = this,
+                searchInput = $(makeup._params.selectors.searchInput),
+                module = $(makeup._params.selectors.module),
+                moduleType = $(makeup._params.selectors.moduleType);
 
+            searchInput.on('keyup', function() {
+                module.removeClass(makeup._params.modifiers.hiddenModule);
+                moduleType.removeClass(makeup._params.modifiers.hiddenModuleType);
+
+                var re = searchInput.val().replace(/\s+/g, '');
+
+                if (!re) {
+                    return;
+                }
+
+                var re = _(re)
+                    .reduce(function(chars, chr) {
+                        chars.push(escapeRegExp(chr));
+                        return chars;
+                    }, [])
+                    .join('.*?');
+
+                re = new RegExp('.*?' + re + '.*?', 'i');
+
+                moduleType.each(function() {
+                    if (!re.test(stripTags(this.innerHTML).replace(/\s+/g, ''))) {
+                        this._shown = false;
+                        $(this).addClass(makeup._params.modifiers.hiddenModuleType);
+                    } else {
+                        this._shown = true;
+                    }
+                });
+
+                module.each(function() {
+                    makeup._mod(this, {expanded: false});
+
+                    var moduleType = $(this).find(makeup._params.selectors.moduleType);
+                    var hasShown = false;
+
+                    moduleType.each(function() {
+                        if (this._shown) {
+                            hasShown = true;
+                            return false;
+                        }
+                    });
+
+                    if (hasShown) {
+                        makeup._mod(this, {expanded: true});
+                    } else {
+                        $(this).addClass(makeup._params.modifiers.hiddenModule);
+                    }
+                });
+            });
         },
 
         /**
@@ -546,7 +619,8 @@ var Makeup = (function($, _) {
         _mod: function(el, modifiers) {
             if (!el.mod) {
                 el.mod = this._parseMod(el);
-                el.blockName = this._detectBEM(el, this.delimiters).blockName;
+                //el.blockName = this._detectBEM(el, this.delimiters).blockName;
+                el.blockName = el.classList[0];
             }
 
             if (!modifiers) {
@@ -655,7 +729,7 @@ var Makeup = (function($, _) {
         _parseMod: function(el, delimiters, params) {
             params = params || {};
             delimiters = delimiters || this._params.delimiters;
-            
+
             var bem = this._detectBEM(el, delimiters, params);
 
             // Переделываем классы в объект модификаторов
@@ -668,9 +742,9 @@ var Makeup = (function($, _) {
                 var delm = bem.mode == 'block' ? delimiters.bm : delimiters.em;
 
                 if (params.bevis) {
-                    re = new RegExp('^' + delm + '([\w-]*)'); // '_state_open' -> 'state_open'
+                    re = new RegExp('^' + delm + '([\w\-]*)'); // '_state_open' -> 'state_open'
                 } else {
-                    re = new RegExp('^' + bem.name + delm + '([\w-]*)'); // '(block__)element_state_open' -> 'state_open'
+                    re = new RegExp('^' + bem.name + delm + '([\w\-]*)'); // '(block__)element_state_open' -> 'state_open'
                 }
                 var tail = _.compact(cls.replace(re, '').split(delimiters.mm));
 
@@ -681,7 +755,7 @@ var Makeup = (function($, _) {
                     if (!value) {
                         value = 'true';
                     }
-                    
+
                     result[key] = value;
                 }
 
@@ -813,8 +887,8 @@ var Makeup = (function($, _) {
         return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    if (TEST) {
-        module.exports = Makeup.prototype;
+    if (typeof TEST != 'undefined' && TEST) {
+        //module.exports = Makeup.prototype;
     }
 
     return Makeup;
