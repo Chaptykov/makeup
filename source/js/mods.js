@@ -3,6 +3,59 @@
         module.exports = Makeup;
     }
 
+/*
+
+@TODO Вариант первоначального парсинга.
+В теории может оказаться заметно быстрее, нужно поисследовать.
+
+// blockName_modName-modValue
+// blockName-elementName_modName-modValue
+
+/**
+ * @param {string} value
+ * @returns {number|string}
+ * /
+function tryValueAsNumber(value) {
+    var num = Number(value);
+    return isNaN(num) ? value : num;
+}
+
+var reWhitespace = /\s/;
+var reModDelimAndWhitespace = /[_\s]/;
+
+/**
+ * @param {HTMLElement} el
+ * @param {string} blockName
+ * @returns {Object}
+ * /
+function init(el, blockName) {
+    var pieces = el.className.split(blockName);
+
+    if (pieces.length == 1) {
+        throw new Error('Element is not bem-element');
+    }
+
+    el._blockName = blockName;
+
+    var modDelimPos = 0;
+
+    if (pieces[1].charAt(0) == '-') {
+        var elementName = el._elementName = pieces[1].split(reModDelimAndWhitespace)[0].slice(1);
+        modDelimPos = elementName.length + 1;
+    }
+
+    return el._mods = pieces.slice(1).reduce(function(mods, piece) {
+        if (piece.charAt(modDelimPos) == '_') {
+            var mod = piece.split(reWhitespace)[0].slice(modDelimPos + 1).split('-');
+            mods[mod[0]] = mod.length == 1 ? true : tryValueAsNumber(mod[1]);
+        }
+
+        return mods;
+    }, Object.create(null));
+}
+
+*/
+
     /**
      * Создаёт CSS класс по бэму
      *
